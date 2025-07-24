@@ -1,0 +1,30 @@
+Trackpoint linux fix
+thinkpad x260
+
+sudo nano /usr/share/X11/xorg.conf.d/90-libinput.conf
+
+paste this
+
+"InputClass"
+    Identifier "libinput pointer catchall"
+    MatchIsPointer "on"
+    MatchDevicePath "/dev/input/event*"
+    Driver "libinput"
+    Option "AccelSpeed" "-0.50"
+EndSection
+
+sudo nano /etc/udev/rules.d/99-trackpoint.rules
+
+paste this
+
+ACTION=="add",
+SUBSYSTEM=="input",
+ATTR{name}=="TPPS/2 IBM TrackPoint",
+ATTR{device/sensitivity}="100",
+ATTR{device/speed}="100",
+ATTR{device/inertia}="0",
+ATTR{device/press_to_select}="0",
+ATTR{device/drift_time}="6"
+
+sudo udevadm control --reload-rules 
+sudo reboot
