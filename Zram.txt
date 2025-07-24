@@ -1,0 +1,7 @@
+Zram
+
+install zram-tools
+
+lzo best for ARM64
+lz4 best for x86
+zstd best for preserve
