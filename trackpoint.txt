@@ -13,7 +13,7 @@ paste this
     Option "AccelSpeed" "-0.50"
 EndSection
 
-sudo nano /etc/udev/rules.d/99-trackpoint.rules
+sudo nano /etc/udev/rules.d/10-trackpoint.rules
 
 paste this
 
