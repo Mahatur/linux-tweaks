@@ -1,0 +1,7 @@
+xubuntu sunshine issue no input
+
+solution:
+sudo usermod -aG input $USER
+sudo nano /etc/udev/rules.d/99-uinput.rules
+KERNEL=="uinput", MODE="0660", GROUP="input"
+sudo udevadm control --reload-rules && sudo udevadm trigger
