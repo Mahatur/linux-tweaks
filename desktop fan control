@@ -1,0 +1,105 @@
+#!/bin/bash
+
+# Find hwmon paths by name (stable across reboots)
+CPU_TEMP_PATH=$(grep -l "coretemp" /sys/class/hwmon/*/name | xargs dirname)/temp1_input
+CPU_FAN_PATH=$(grep -l "it8728" /sys/class/hwmon/*/name | xargs dirname)/pwm3
+CPU_FAN_ENABLE=$(grep -l "it8728" /sys/class/hwmon/*/name | xargs dirname)/pwm3_enable
+
+# Enable manual control
+echo 1 > $CPU_FAN_ENABLE
+
+# Function to calculate PWM duty cycle (linear mapping)
+calculate_pwm() {
+    local TEMP=$1
+    local MIN_TEMP=$2
+    local MAX_TEMP=$3
+    local MIN_PWM=0
+    local MAX_PWM=255
+
+    if (( TEMP <= MIN_TEMP )); then
+        echo $MIN_PWM
+        return
+    fi
+
+    if (( TEMP >= MAX_TEMP )); then
+        echo $MAX_PWM
+        return
+    fi
+
+    echo $(( (TEMP - MIN_TEMP) * (MAX_PWM - MIN_PWM) / (MAX_TEMP - MIN_TEMP) + MIN_PWM ))
+}
+
+while true; do
+    # Read CPU temp (°C)
+    CPU_TEMP=$(( $(cat $CPU_TEMP_PATH) / 1000 ))
+
+    # Map 40°C → 0% and 95°C → 100%
+    CPU_PWM=$(calculate_pwm $CPU_TEMP 40 95)
+
+    # Apply new fan speed
+    echo $CPU_PWM > $CPU_FAN_PATH
+
+    # Debug info
+    echo "CPU: ${CPU_TEMP}°C → PWM: $CPU_PWM"
+
+    sleep 5
+done
+
+
+
+with gpu
+
+
+#!/bin/bash
+
+# Paths for sensors and PWM controls
+GPU_TEMP_PATH="/sys/class/hwmon/hwmon2/temp1_input"
+GPU_FAN_PATH="/sys/class/hwmon/hwmon2/pwm1"
+
+CPU_TEMP_PATH="/sys/class/hwmon/hwmon3/temp1_input"
+CPU_FAN_PATH="/sys/class/hwmon/hwmon6/pwm2"
+
+# Enable manual control
+echo 1 > /sys/class/hwmon/hwmon2/pwm1_enable
+echo 1 > /sys/class/hwmon/hwmon6/pwm2_enable
+
+# Function to calculate PWM duty cycle (linear mapping)
+calculate_pwm() {
+    local TEMP=$1
+    local MIN_TEMP=$2
+    local MAX_TEMP=$3
+    local MIN_PWM=0
+    local MAX_PWM=255
+
+    # If temperature is below minimum, return min PWM
+    if (( TEMP <= MIN_TEMP )); then
+        echo $MIN_PWM
+        return
+    fi
+
+    # If temperature is above maximum, return max PWM
+    if (( TEMP >= MAX_TEMP )); then
+        echo $MAX_PWM
+        return
+    fi
+
+    # Linear scaling: ((TEMP - MIN_TEMP) * (MAX_PWM - MIN_PWM) / (MAX_TEMP - MIN_TEMP)) + MIN_PWM
+    echo $(( (TEMP - MIN_TEMP) * (MAX_PWM - MIN_PWM) / (MAX_TEMP - MIN_TEMP) + MIN_PWM ))
+}
+
+while true; do
+    # Read temperatures (divide by 1000 to convert from millidegrees)
+    GPU_TEMP=$(( $(cat $GPU_TEMP_PATH) / 1000 ))
+    CPU_TEMP=$(( $(cat $CPU_TEMP_PATH) / 1000 ))
+
+    # Calculate PWM values
+    GPU_PWM=$(calculate_pwm $GPU_TEMP 40 85)
+    CPU_PWM=$(calculate_pwm $CPU_TEMP 40 95)
+
+    # Apply new fan speeds
+    echo $GPU_PWM > $GPU_FAN_PATH
+    echo $CPU_PWM > $CPU_FAN_PATH
+
+    # Wait 5 seconds before checking again
+    sleep 5
+done
