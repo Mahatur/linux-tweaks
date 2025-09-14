@@ -1,3 +1,29 @@
 git clone https://github.com/kitsunyan/intel-undervolt.git
 ./configure && make && make install
 Disable SGX, secure boot
+
+
+/etc/systemd/system/intel-undervolt.service
+
+[Unit]
+Description=Apply intel-undervolt settings
+After=multi-user.target suspend.target hibernate.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/intel-undervolt apply
+
+[Install]
+WantedBy=multi-user.target
+
+/lib/systemd/system-sleep/99-intel-undervolt
+
+#!/bin/sh
+case $1/$2 in
+  post/*)
+    /usr/bin/intel-undervolt apply
+    ;;
+esac
+
+
+sudo chmod +x /lib/systemd/system-sleep/99-intel-undervolt
