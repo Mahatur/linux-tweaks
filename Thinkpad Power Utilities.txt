@@ -217,8 +217,8 @@ exit 0
 #!/bin/bash
 
 # Configuration
-BAT0_MAX=80
-BAT1_MAX=80
+BAT0_MAX=75
+BAT1_MAX=75
 AC_FILE="/sys/class/power_supply/AC/online"
 CHECK_INTERVAL=1           # Keep 1 second for responsive AC detection
 DISCONNECT_LIMIT=5
