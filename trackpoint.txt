@@ -28,3 +28,11 @@ ATTR{device/drift_time}="6"
 
 sudo udevadm control --reload-rules 
 sudo reboot
+
+
+Manual Calibration shortcut
+
+#!/bin/bash
+echo 1 | sudo tee /sys/devices/platform/i8042/serio1/serio2/drift_time
+sleep 1
+echo 10 | sudo tee /sys/devices/platform/i8042/serio1/serio2/drift_time
