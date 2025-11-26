@@ -1,0 +1,205 @@
+For i5 6300U
+
+
+Perfomance mode:
+
+#!/bin/bash
+
+# Persistent profile file
+PROFILE_FILE="$HOME/.Powerprofile.txt"
+
+# Create file if it doesn't exist
+if [ ! -f "$PROFILE_FILE" ]; then
+    echo "performance" > "$PROFILE_FILE"
+fi
+
+# Set Performance Mode
+sudo cpupower frequency-set -g performance -d 400MHz -u 3000MHz
+echo 100000000000000000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+echo 100000000000000000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+echo 30000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
+echo 30000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw
+
+# Save current profile
+echo "performance" > "$PROFILE_FILE"
+
+# Notification & sound
+notify-send "Performance Mode" "15+ Watt power!!!"
+paplay /usr/share/sounds/freedesktop/stereo/message-new-instant.oga
+
+
+Normal mode:
+
+#!/bin/bash
+
+# Persistent profile file
+PROFILE_FILE="$HOME/.Powerprofile.txt"
+
+# Create file if it doesn't exist
+if [ ! -f "$PROFILE_FILE" ]; then
+    echo "powersave" > "$PROFILE_FILE"
+fi
+
+# Set Normal Powersave
+sudo cpupower frequency-set -g powersave -d 400MHz -u 3000MHz
+echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+echo 7500000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
+echo 7500000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw
+
+# Save current profile to file
+echo "normal" > "$PROFILE_FILE"
+
+# Notification & sound
+notify-send "Normal Mode" "7.5 Watt power"
+paplay /usr/share/sounds/freedesktop/stereo/message.oga
+
+
+Powersave mode:
+
+#!/bin/bash
+
+# Persistent profile file
+PROFILE_FILE="$HOME/.Powerprofile.txt"
+
+# Create file if it doesn't exist
+if [ ! -f "$PROFILE_FILE" ]; then
+    echo "powersave" > "$PROFILE_FILE"
+fi
+
+# Set Powersave Mode
+sudo cpupower frequency-set -g powersave -d 400MHz -u 3000MHz
+echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+echo 3750000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
+echo 3750000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw
+
+# Save current profile
+echo "powersave" > "$PROFILE_FILE"
+
+# Notification & sound
+notify-send "Powersave Mode" "3.75 Watt power"
+paplay /usr/share/sounds/freedesktop/stereo/message.oga
+
+
+Idle powersave
+
+#!/bin/bash
+
+IDLE_THRESHOLD=300000
+PROFILE_FILE="$HOME/.Powerprofile.txt"
+ULTRA_ACTIVE=0
+
+# Ensure profile file exists
+if [ ! -f "$PROFILE_FILE" ]; then
+    echo "normal" > "$PROFILE_FILE"
+fi
+
+while true; do
+    idle_ms=$(xprintidle)
+
+    # Trigger Ultra Powersave if idle threshold passed
+    if [[ $idle_ms -ge $IDLE_THRESHOLD && $ULTRA_ACTIVE -eq 0 ]]; then
+        # Ultra Powersave
+        sudo cpupower frequency-set -g powersave -d 400MHz -u 3000MHz
+        echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+        echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+        echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
+        echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw
+        notify-send "Ultra Powersave" "Lowest Watt mode active"
+        ULTRA_ACTIVE=1
+    fi
+
+    # Restore last profile instantly when activity resumes
+    if [[ $idle_ms -lt $IDLE_THRESHOLD && $ULTRA_ACTIVE -eq 1 ]]; then
+        ULTRA_ACTIVE=0
+        PROFILE=$(cat "$PROFILE_FILE")
+        case "$PROFILE" in
+            performance)
+                sudo cpupower frequency-set -g performance -d 400MHz -u 3000MHz
+                echo 100000000000000000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+                echo 100000000000000000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+                echo 30000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
+                echo 30000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw
+                notify-send "Performance Mode" "Restored"
+                ;;
+            normal)
+                sudo cpupower frequency-set -g powersave -d 400MHz -u 3000MHz
+                echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+                echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+                echo 7500000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
+                echo 7500000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw
+                notify-send "Normal Mode" "Restored"
+                ;;
+            powersave)
+                sudo cpupower frequency-set -g powersave -d 400MHz -u 3000MHz
+                echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+                echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+                echo 3750000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw
+                echo 3750000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw
+                notify-send "Powersave Mode" "Restored"
+                ;;
+        esac
+    fi
+
+    sleep 2
+done
+
+
+
+Instant wakeup
+
+
+#!/bin/bash
+PROFILE_FILE="$HOME/.Powerprofile.txt"
+BOOST_DURATION=5
+
+# Ensure profile file exists
+if [ ! -f "$PROFILE_FILE" ]; then
+    echo "normal" > "$PROFILE_FILE"
+fi
+
+# Function to apply performance boost
+apply_performance_boost() {
+    sudo cpupower frequency-set -g performance -d 400MHz -u 3000MHz
+    echo 100000000000000000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+    echo 100000000000000000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+    echo 30000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw > /dev/null
+    echo 30000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw > /dev/null
+}
+
+# Function to restore saved profile
+restore_profile() {
+    PROFILE=$(cat "$PROFILE_FILE")
+    case "$PROFILE" in
+        performance)
+            sudo cpupower frequency-set -g performance -d 400MHz -u 3000MHz
+            echo 100000000000000000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+            echo 100000000000000000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+            echo 30000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw > /dev/null
+            echo 30000000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw > /dev/null
+            ;;
+        normal)
+            sudo cpupower frequency-set -g powersave -d 400MHz -u 3000MHz
+            echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+            echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+            echo 7500000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw > /dev/null
+            echo 7500000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw > /dev/null
+            ;;
+        powersave)
+            sudo cpupower frequency-set -g powersave -d 400MHz -u 3000MHz
+            echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_time_window_us > /dev/null
+            echo 1 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_time_window_us > /dev/null
+            echo 3750000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_0_power_limit_uw > /dev/null
+            echo 3750000 | sudo tee /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw > /dev/null
+            ;;
+    esac
+}
+
+# Apply performance boost immediately
+apply_performance_boost
+
+# Wait for BOOST_DURATION seconds, then restore saved profile
+sleep "$BOOST_DURATION"
+restore_profile
+
