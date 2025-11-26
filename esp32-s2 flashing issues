@@ -1,0 +1,7 @@
+When flashing esp32-s2 on laptops, it always enconter problems of not able to self reset via serial, solution is:
+Disable the usb autosuspend!!!
+
+config: usbcore.autosuspend=-1
+example: 
+
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash pcie_aspm=off usbcore.autosuspend=-1"
