@@ -1,0 +1,83 @@
+Le chatgpt
+
+📌 Fix Audio Crackling on ThinkPad + Moonlight (Linux, PipeWire)
+
+This fix applies when Moonlight audio crackles on Linux even when muted, especially on ThinkPad laptops using PipeWire.
+Cause: CPU enters deep power states → small audio buffers → timing jitter → crackle.
+Solution: force stable PipeWire metadata with larger quantum buffer.
+
+🛠 Step 1 — Test Fix
+
+Run this manually first:
+
+pw-metadata -n settings 0 clock.force-rate 48000
+pw-metadata -n settings 0 clock.force-quantum 2048
+
+
+If crackling stops, continue.
+
+If you want lower latency for wired gaming headphones, use 1024 instead of 2048.
+
+💾 Step 2 — Make It Permanent
+
+Create a user systemd service:
+
+mkdir -p ~/.config/systemd/user
+nano ~/.config/systemd/user/pipewire-latency.service
+
+
+Paste:
+
+[Unit]
+Description=Fix ThinkPad audio crackling (PipeWire metadata)
+After=pipewire.service wireplumber.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/usr/bin/pw-metadata -n settings 0 clock.force-rate 48000
+ExecStart=/usr/bin/pw-metadata -n settings 0 clock.force-quantum 2048
+
+[Install]
+WantedBy=default.target
+
+
+Save, then run:
+
+systemctl --user daemon-reload
+systemctl --user enable --now pipewire-latency.service
+
+
+Verify:
+
+systemctl --user status pipewire-latency.service
+
+🧪 Optional: Extra Stability for Bluetooth Audio
+
+Create:
+
+nano ~/.config/pipewire/media-session.d/with-pipewire.conf
+
+
+Add:
+
+bluez5.msbc-support = true
+bluez5.hfp-max-msbc-size = 240
+bluez5.enable-sbc-xq = true
+
+
+Reload:
+
+systemctl --user restart pipewire pipewire-pulse
+
+📌 Notes
+Quantum	Usage
+1024	Wired headphones, low latency game streaming
+2048	Best for Bluetooth, battery saving
+3072+	Extreme stability, acceptable only for Bluetooth
+🧠 Why This Fix Works
+
+ThinkPads aggressively downclock and enter deep CPU sleep states to save battery.
+Moonlight + PipeWire uses very small audio buffers, so when the CPU wakes late, audio timing breaks, producing crackles.
+
+Increasing the PipeWire quantum gives the audio system more timing headroom, without needing performance mode.
