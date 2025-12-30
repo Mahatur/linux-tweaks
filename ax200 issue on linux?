@@ -1,0 +1,41 @@
+ai wrote this, just a reference
+
+
+sudo nano /usr/local/bin/wifi-reset
+
+#!/bin/bash
+modprobe -r iwlwifi && modprobe iwlwifi
+systemctl restart NetworkManager
+
+sudo chmod +x /usr/local/bin/wifi-reset
+
+sudo nano /etc/systemd/system/wifi-resume.service
+
+
+[Unit]
+Description=Restart WiFi after suspend
+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/modprobe -r iwlwifi
+ExecStart=/bin/sleep 1
+ExecStart=/sbin/modprobe iwlwifi
+
+[Install]
+WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+sudo systemctl daemon-reload
+sudo systemctl enable wifi-resume.service
+
+sudo nano /etc/default/grub
+```
+
+Find the line with `GRUB_CMDLINE_LINUX_DEFAULT` and add `iwlwifi.power_save=0`:
+```
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash iwlwifi.power_save=0"
+
+sudo update-grub  # Debian/Ubuntu
+# or
+sudo grub-mkconfig -o /boot/grub/grub.cfg  # Arch/others
+
