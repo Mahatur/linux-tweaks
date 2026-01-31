@@ -1,0 +1,69 @@
+laptop waking up randomly inside bag?
+solution: (xubuntu)
+
+
+#!/bin/bash
+# Save as: /usr/local/bin/check-lid-resuspend.sh
+
+# Wait 2 seconds after wake to let system stabilize
+sleep 2
+
+# Counter for checks (15 seconds / 1 second interval = 15 checks)
+for i in {1..15}; do
+    # Check lid state from multiple possible locations
+    LID_STATE=""
+    
+    # Try /proc/acpi/button/lid/LID/state first
+    if [ -f /proc/acpi/button/lid/LID/state ]; then
+        LID_STATE=$(cat /proc/acpi/button/lid/LID/state | awk '{print $2}')
+    # Try alternative path
+    elif [ -f /proc/acpi/button/lid/LID0/state ]; then
+        LID_STATE=$(cat /proc/acpi/button/lid/LID0/state | awk '{print $2}')
+    # Try sysfs
+    elif [ -f /sys/class/power_supply/AC/online ]; then
+        # Some systems use different paths
+        for lid in /sys/devices/LNXSYSTM:00/LNXSYBUS:00/PNP0C0D:00/input/input*/lid_state; do
+            if [ -f "$lid" ]; then
+                LID_STATE=$(cat "$lid")
+                [ "$LID_STATE" = "0" ] && LID_STATE="closed"
+                [ "$LID_STATE" = "1" ] && LID_STATE="open"
+                break
+            fi
+        done
+    fi
+    
+    # Log for debugging
+    logger -t resuspend "Check $i/15: Lid state is '$LID_STATE'"
+    
+    # If lid is open, exit - user intentionally woke the system
+    if [ "$LID_STATE" = "open" ]; then
+        logger -t resuspend "Lid open, aborting re-suspend"
+        exit 0
+    fi
+    
+    # If lid is closed and we're on the last check, re-suspend
+    if [ "$i" -eq 15 ] && [ "$LID_STATE" = "closed" ]; then
+        logger -t resuspend "Lid still closed after 15s, re-suspending"
+        systemctl suspend
+        exit 0
+    fi
+    
+    # Wait 1 second before next check
+    sleep 1
+done
+
+exit 0
+
+
+
+# Make sure your script is executable
+sudo chmod +x /usr/local/bin/check-lid-resuspend.sh
+
+# Copy the service file to systemd directory
+sudo cp check-lid-resuspend.service /etc/systemd/system/
+
+# Reload systemd to recognize the new service
+sudo systemctl daemon-reload
+
+# Enable it to run on every resume
+sudo systemctl enable check-lid-resuspend.service
